@@ -29,14 +29,17 @@ fn rotword(a: u32) -> u32 {
 fn subbyte(a: u32, o: u8) -> u8 {
 	SBOX[((a >> o) & 0xFF) as usize]
 }
+fn subword(a: u32) -> u32 {
+	(subbyte(a, 24) as u32) << 24
+	|(subbyte(a, 16) as u32) << 16
+	|(subbyte(a, 8) as u32) << 8
+	|(subbyte(a, 0) as u32)
+}
 fn main() {
     let s = 0xABCD1234;
-    let s2 = rotword(s);
+    let mut s2 = rotword(s);
     println!("s2: {:#X}", s2);
-	let s2 = (subbyte(s2, 24) as u32) << 24
-		   |(subbyte(s2, 16) as u32) << 16
-		   |(subbyte(s2, 8) as u32) << 8
-		   |(subbyte(s2, 0) as u32);
+	s2 = subword(s2);
     println!("s2: {:#X}", s2);
 }
 
