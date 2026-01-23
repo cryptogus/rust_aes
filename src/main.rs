@@ -23,12 +23,21 @@ const SBOX : [u8; 256] = [
 	0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f,
 	0xb0, 0x54, 0xbb, 0x16];
 
+fn rotword(a: u32) -> u32 {
+	((a) >> 24)|((a) << 8)
+}
+fn subbyte(a: u32, o: u8) -> u8 {
+	SBOX[((a >> o) & 0xFF) as usize]
+}
 fn main() {
     let s = 0xABCD1234;
     let s2 = rotword(s);
     println!("s2: {:#X}", s2);
+	let s2 = (subbyte(s2, 24) as u32) << 24
+		   |(subbyte(s2, 16) as u32) << 16
+		   |(subbyte(s2, 8) as u32) << 8
+		   |(subbyte(s2, 0) as u32);
+    println!("s2: {:#X}", s2);
 }
 
-fn rotword(a: u32) -> u32 {
-	((a) >> 24)|((a) << 8)
-}
+
