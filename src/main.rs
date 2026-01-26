@@ -1,3 +1,7 @@
+struct AesKeySched {
+	rd_key: [u32; 44], // 4*(Nr+1) where Nr=10 for AES-128
+}
+
 
 const SBOX : [u8; 256] = [
 	0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b,
@@ -35,12 +39,32 @@ fn subword(a: u32) -> u32 {
 	|(subbyte(a, 8) as u32) << 8
 	|(subbyte(a, 0) as u32)
 }
+
+fn aes128_set_encrypt_key(s: &mut AesKeySched, key: [u8; 16] )
+{
+	const RCONST : [u32; 11] = [
+		0x00000000, 0x01000000, 0x02000000, 0x04000000,
+		0x08000000, 0x10000000, 0x20000000, 0x40000000,
+		0x80000000, 0x1b000000, 0x36000000];
+	s.rd_key[0] = ((key[0] as u32) << 24)
+		|((key[1] as u32) << 16)
+		|((key[2] as u32) << 8)
+		|((key[3] as u32) << 0);
+}
 fn main() {
+	let key: [u8; 16] = [
+		0x2b, 0x7e, 0x15, 0x16,
+		0x28, 0xae, 0xd2, 0xa6,
+		0xab, 0xf7, 0x97, 0x67,
+		0x2b, 0x7e, 0x15, 0x16];
     let s = 0xABCD1234;
     let mut s2 = rotword(s);
     println!("s2: {:#X}", s2);
 	s2 = subword(s2);
     println!("s2: {:#X}", s2);
+	let mut key_sched = AesKeySched { rd_key: [0; 44] };
+	
+	aes128_set_encrypt_key(&mut key_sched, key);
 }
 
 
