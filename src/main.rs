@@ -2,7 +2,7 @@ const NB: usize = 4;  // Number of columns (32-bit words) comprising the State. 
 const NK: usize = 4;  // Number of 32-bit words comprising the Cipher Key. For AES-128, Nk = 4.
 const NR: usize = 10; // Number of rounds for AES-128
 
-struct AesKeySched {
+pub struct AesKeySched {
 	rd_key: [u32; 4*(NR+1)], // 4*(Nr+1) where Nr=10 for AES-128
 }
 
@@ -44,7 +44,7 @@ fn subword(a: u32) -> u32 {
 	|(subbyte(a, 0) as u32)
 }
 
-fn aes128_set_encrypt_key(s: &mut AesKeySched, key: [u8; 16] )
+pub fn aes128_set_encrypt_key(s: &mut AesKeySched, key: [u8; 16] )
 {
 	const RCONST : [u32; 11] = [
 		0x00000000, 0x01000000, 0x02000000, 0x04000000,
