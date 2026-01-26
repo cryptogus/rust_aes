@@ -1,5 +1,9 @@
+const NB: usize = 4;  // Number of columns (32-bit words) comprising the State. For AES, Nb = 4.
+const NK: usize = 4;  // Number of 32-bit words comprising the Cipher Key. For AES-128, Nk = 4.
+const NR: usize = 10; // Number of rounds for AES-128
+
 struct AesKeySched {
-	rd_key: [u32; 44], // 4*(Nr+1) where Nr=10 for AES-128
+	rd_key: [u32; 4*(NR+1)], // 4*(Nr+1) where Nr=10 for AES-128
 }
 
 
@@ -46,10 +50,21 @@ fn aes128_set_encrypt_key(s: &mut AesKeySched, key: [u8; 16] )
 		0x00000000, 0x01000000, 0x02000000, 0x04000000,
 		0x08000000, 0x10000000, 0x20000000, 0x40000000,
 		0x80000000, 0x1b000000, 0x36000000];
-	s.rd_key[0] = ((key[0] as u32) << 24)
-		|((key[1] as u32) << 16)
-		|((key[2] as u32) << 8)
-		|((key[3] as u32) << 0);
+
+	for i in 0..NK {
+		s.rd_key[i] = ((key[NB*i] as u32) << 24)
+			| ((key[NB*i + 1] as u32) << 16)
+			| ((key[NB*i + 2] as u32) << 8)
+			| ((key[NB*i + 3] as u32));
+	}
+	
+	for i in NK..(NB*(NR+1)) {
+		let mut temp = s.rd_key[i - 1];
+		if i % NK == 0 {
+			temp = subword(rotword(temp)) ^ RCONST[i / NK];
+		}
+		s.rd_key[i] = s.rd_key[i - NK] ^ temp;
+	}
 }
 fn main() {
 	let key: [u8; 16] = [
@@ -57,14 +72,14 @@ fn main() {
 		0x28, 0xae, 0xd2, 0xa6,
 		0xab, 0xf7, 0x97, 0x67,
 		0x2b, 0x7e, 0x15, 0x16];
-    let s = 0xABCD1234;
-    let mut s2 = rotword(s);
-    println!("s2: {:#X}", s2);
-	s2 = subword(s2);
-    println!("s2: {:#X}", s2);
-	let mut key_sched = AesKeySched { rd_key: [0; 44] };
+
+	let mut key_sched: AesKeySched = AesKeySched { rd_key: [0; 44] };
 	
+	// Generate the key schedule, Big Endian format
 	aes128_set_encrypt_key(&mut key_sched, key);
+	for i in 0..key_sched.rd_key.len() {
+		println!("Key[{}]: {:#010X}", i, key_sched.rd_key[i]);
+	}
 }
 
 
