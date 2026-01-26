@@ -1,6 +1,7 @@
 const NB: usize = 4; // Number of columns (32-bit words) comprising the State. For AES, Nb = 4.
 const NK: usize = 4; // Number of 32-bit words comprising the Cipher Key. For AES-128, Nk = 4.
 const NR: usize = 10; // Number of rounds for AES-128
+const MASK_TWENTY_SEVEN: u8 = 0x1b;
 
 pub struct AesKeySched {
     rd_key: [u32; 4 * (NR + 1)], // 4*(Nr+1) where Nr=10 for AES-128
@@ -61,6 +62,67 @@ impl AesKeySched {
     }
 }
 
+fn add_round_key(s: &mut [u8; 16], k: &[u32; 16]) {
+    s[0] ^= (k[0] >> 24) as u8;
+    s[1] ^= (k[0] >> 16) as u8;
+    s[2] ^= (k[0] >> 8) as u8;
+    s[3] ^= (k[0]) as u8;
+    s[4] ^= (k[1] >> 24) as u8;
+    s[5] ^= (k[1] >> 16) as u8;
+    s[6] ^= (k[1] >> 8) as u8;
+    s[7] ^= (k[1]) as u8;
+    s[8] ^= (k[2] >> 24) as u8;
+    s[9] ^= (k[2] >> 16) as u8;
+    s[10] ^= (k[2] >> 8) as u8;
+    s[11] ^= (k[2]) as u8;
+    s[12] ^= (k[3] >> 24) as u8;
+    s[13] ^= (k[3] >> 16) as u8;
+    s[14] ^= (k[3] >> 8) as u8;
+    s[15] ^= (k[3]) as u8;
+}
+
+fn sub_bytes(s: &mut [u8; 16]) {
+    for i in 0..16 {
+        s[i] = SBOX[s[i] as usize];
+    }
+}
+
+fn _double_byte(a: u8) -> u8 {
+    (a << 1) ^ ((a >> 7) * MASK_TWENTY_SEVEN)
+}
+
+fn triple_byte(a: u8) -> u8 {
+    _double_byte(a) ^ a
+}
+
+fn mult_row_column(input: [u8; 4], output: &mut [u8; 4]) {
+    output[0] = _double_byte(input[0]) ^ triple_byte(input[1]) ^ input[2] ^ input[3];
+    output[1] = input[0] ^ _double_byte(input[1]) ^ triple_byte(input[2]) ^ input[3];
+    output[2] = input[0] ^ input[1] ^ _double_byte(input[2]) ^ triple_byte(input[3]);
+    output[3] = triple_byte(input[0]) ^ input[1] ^ input[2] ^ _double_byte(input[3]);
+}
+
+fn mix_columns(s: &mut [u8; 16])
+{
+    let mut t: [u8; 16] = [0; 16];
+    mult_row_column(
+        [s[0], s[1], s[2], s[3]],
+        (&mut t[0..4]).try_into().unwrap(),
+    );
+    mult_row_column(
+        [s[4], s[5], s[6], s[7]],
+        (&mut t[4..8]).try_into().unwrap(),
+    );
+    mult_row_column(
+        [s[8], s[9], s[10], s[11]],
+        (&mut t[8..12]).try_into().unwrap(),
+    );
+    mult_row_column(
+        [s[12], s[13], s[14], s[15]],
+        (&mut t[12..16]).try_into().unwrap(),
+    );
+    s.copy_from_slice(&t);
+}
 fn main() {
     let key: [u8; 16] = [
         0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x97, 0x67, 0x2b, 0x7e, 0x15,
