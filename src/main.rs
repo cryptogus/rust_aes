@@ -62,7 +62,7 @@ impl AesKeySched {
     }
 }
 
-fn add_round_key(s: &mut [u8; 16], k: &[u32; 16]) {
+fn add_round_key(s: &mut [u8; 16], k: &[u32; 4]) {
     s[0] ^= (k[0] >> 24) as u8;
     s[1] ^= (k[0] >> 16) as u8;
     s[2] ^= (k[0] >> 8) as u8;
@@ -123,6 +123,33 @@ fn mix_columns(s: &mut [u8; 16])
     );
     s.copy_from_slice(&t);
 }
+
+fn shif_rows(s: &mut [u8; 16]) {
+    let t: [u8; 16] = [
+        s[0], s[5], s[10], s[15], s[4], s[9], s[14], s[3], s[8], s[13], s[2], s[7], s[12], s[1],
+        s[6], s[11],
+    ];
+    s.copy_from_slice(&t);
+}
+
+fn aes_encrypt(input: &[u8; 16], key_sched: &AesKeySched) -> [u8; 16] {
+    let mut state: [u8; 16] = *input;
+
+    add_round_key(&mut state, &key_sched.rd_key[0..4].try_into().unwrap());
+
+    for round in 1..NR {
+        sub_bytes(&mut state);
+        shif_rows(&mut state);
+        mix_columns(&mut state);
+        add_round_key(&mut state, &key_sched.rd_key[round * 4..(round + 1) * 4].try_into().unwrap());
+    }
+
+    sub_bytes(&mut state);
+    shif_rows(&mut state);
+    add_round_key(&mut state, &key_sched.rd_key[NR * 4..(NR + 1) * 4].try_into().unwrap());
+
+    state
+}
 fn main() {
     let key: [u8; 16] = [
         0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x97, 0x67, 0x2b, 0x7e, 0x15,
@@ -138,4 +165,7 @@ fn main() {
     for i in 0..key_sched.rd_key.len() {
         println!("Key[{}]: {:#010X}", i, key_sched.rd_key[i]);
     }
+
+    let ciphertext: [u8; 16] = aes_encrypt(&[0u8; 16], &key_sched);
+    println!("Ciphertext: {:02X?}", ciphertext); // B8 E2 DC F6 6B B5 97 82 C0 E5 A7 8D 4C CD 97 09
 }
